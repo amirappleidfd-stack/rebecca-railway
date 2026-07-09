@@ -1,0 +1,20 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+# Railway injects $PORT automatically; the start script reads it.
+[env]
+HOST = "0.0.0.0"
+UVICORN_HOST = "0.0.0.0"
+# SQLALCHEMY_DATABASE_URL is set per-environment (Railway Postgres plugin).
+# Leave it unset here so the container falls back to SQLite unless the
+# Postgres plugin provides DATABASE_URL / SQLALCHEMY_DATABASE_URL.
+SQLALCHEMY_DATABASE_URL = "sqlite:////code/db.sqlite3"
+XRAY_EXECUTABLE_PATH = "/usr/local/bin/xray"
+XRAY_ASSETS_PATH = "/usr/local/share/xray"
