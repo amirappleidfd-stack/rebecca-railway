@@ -4,6 +4,55 @@
 <head>
     <title>Subscription Information</title>
     <style>
+        /* Neon Telegram top panel */
+        .tg-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            height: 48px;
+            background: rgba(10, 10, 12, 0.92);
+            border-bottom: 2px solid #29a9eb;
+            box-shadow: 0 0 8px #29a9eb, 0 0 18px #29a9eb inset;
+            backdrop-filter: blur(4px);
+        }
+
+        .tg-panel a {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #29a9eb;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 6px #29a9eb, 0 0 12px #29a9eb;
+            transition: color 0.2s ease;
+        }
+
+        .tg-panel a:hover {
+            color: #65c6ff;
+            text-shadow: 0 0 8px #65c6ff, 0 0 20px #65c6ff;
+        }
+
+        .tg-panel svg {
+            width: 26px;
+            height: 26px;
+            fill: #29a9eb;
+            filter: drop-shadow(0 0 4px #29a9eb) drop-shadow(0 0 10px #29a9eb);
+        }
+
+        /* Push page content below the fixed panel */
+        body {
+            padding-top: 68px;
+        }
+
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
@@ -73,6 +122,14 @@
 </head>
 
 <body>
+    <div class="tg-panel">
+        <a href="https://t.me/amisplder" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.49-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
+            </svg>
+            <span>Join us on Telegram</span>
+        </a>
+    </div>
     <h1>User Information</h1>
     <p>Username: {{ user.username }}</p>
     <p>Status: <span
