@@ -48,6 +48,9 @@ XRAY_LOGS_DIR = Path(os.environ.get("SPIDER_XRAY_LOGS_DIR", "/app/xray-logs"))
 
 # User-editable config (repo root) + persisted generated secrets.
 USER_CONFIG_PATH = Path(os.environ.get("SPIDER_USER_CONFIG", "config.json")).resolve()
+TEMPLATE_PATH = Path(
+    os.environ.get("SPIDER_XRAY_TEMPLATE", "templates/xray_config_template.json")
+).resolve()
 KEYS_PATH = XRAY_CONFIG_DIR / "reality_keys.json"
 
 XRAY_DOWNLOAD_URL = (
@@ -62,9 +65,13 @@ REMARK = os.environ.get("SPIDER_REMARK", "Spider")
 
 DEFAULT_USER_CONFIG = {
     "tcp_proxy_domain": "",
-    "external_port": 0,
-    "internal_port": 443,
-    "sni": "is1-ssl.mzstatic.com",
+    "external_port": "0",
+    "internal_port": "443",
+    "sni_host": "is1-ssl.mzstatic.com",
+    "network": "xhttp",
+    "security": "reality",
+    "type": "vless",
+    "xray_binary": str(XRAY_BINARY),
 }
 
 
@@ -94,12 +101,19 @@ def load_user_config() -> dict:
         USER_CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n")
         logger.warning(f"[Spider] created default {USER_CONFIG_PATH}; edit it and redeploy")
 
-    if not cfg["tcp_proxy_domain"] or not cfg["external_port"]:
+    if not cfg["tcp_proxy_domain"] or int(cfg["external_port"] or 0) <= 0:
         raise RuntimeError(
             "[Spider] config.json must set tcp_proxy_domain and external_port"
         )
     logger.info(f"[Spider] Domain: {cfg['tcp_proxy_domain']}  External port: {cfg['external_port']}")
-    logger.info(f"[Xray] Internal listen port: {cfg['internal_port']}  SNI: {cfg['sni']}")
+    logger.info(f"[Xray] Internal listen port: {cfg['internal_port']}  SNI: {cfg['sni_host']}")
+
+    # Honor an explicit xray_binary from config if it exists (else keep default).
+    global XRAY_BINARY
+    cfg_bin = cfg.get("xray_binary")
+    if cfg_bin and Path(cfg_bin).exists():
+        XRAY_BINARY = Path(cfg_bin)
+        logger.info(f"[Xray] Using binary from config: {XRAY_BINARY}")
     return cfg
 
 
@@ -231,38 +245,39 @@ def _collect_vless_clients() -> List[dict]:
     return clients
 
 
-def build_xray_config(user_cfg: dict, keys: dict) -> dict:
-    dest = f"{user_cfg['sni']}:443"
-    return {
-        "log": {"loglevel": "warning"},
-        "inbounds": [
-            {
-                "tag": INBOUND_TAG,
-                "listen": "0.0.0.0",
-                "port": int(user_cfg["internal_port"]),  # NEVER external_port
-                "protocol": "vless",
-                "settings": {"clients": _collect_vless_clients(), "decryption": "none"},
-                "streamSettings": {
-                    "network": "xhttp",
-                    "security": "reality",
-                    "realitySettings": {
-                        "show": False,
-                        "dest": dest,
-                        "serverNames": [user_cfg["sni"]],
-                        "privateKey": keys["privateKey"],
-                        "shortIds": [keys["shortId"]],
-                    },
-                    "xhttpSettings": {"path": XHTTP_PATH, "mode": XHTTP_MODE},
-                },
-            }
-        ],
-        "outbounds": [{"protocol": "freedom", "tag": "DIRECT"}],
-    }
+def render_template(user_cfg: dict, keys: dict) -> dict:
+    """Render templates/xray_config_template.json by substituting placeholders.
+
+    Placeholders: {{INTERNAL_PORT}} {{CLIENTS}} {{SNI_HOST}} {{PRIVATE_KEY}} {{SHORT_ID}}.
+    CLIENTS is rendered as the inner JSON of the clients array (comma-joined
+    objects), so the template's surrounding [ ] stays intact.
+    Xray ALWAYS listens on internal_port; external_port never appears here.
+    """
+    if not TEMPLATE_PATH.exists():
+        raise RuntimeError(f"[Xray] template not found: {TEMPLATE_PATH}")
+    raw = TEMPLATE_PATH.read_text()
+
+    clients = _collect_vless_clients()
+    clients_json = ",\n          ".join(
+        json.dumps({"id": c["id"], "email": c["email"]}) for c in clients
+    )
+
+    rendered = (
+        raw.replace("{{INTERNAL_PORT}}", str(int(user_cfg["internal_port"])))
+        .replace("{{CLIENTS}}", clients_json)
+        .replace("{{SNI_HOST}}", user_cfg["sni_host"])
+        .replace("{{PRIVATE_KEY}}", keys["privateKey"])
+        .replace("{{SHORT_ID}}", keys["shortId"])
+    )
+    try:
+        return json.loads(rendered)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"[Xray] rendered template is invalid JSON: {e}\n{rendered}") from e
 
 
 def generate_config(user_cfg: dict, keys: dict) -> Path:
     XRAY_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    cfg = build_xray_config(user_cfg, keys)
+    cfg = render_template(user_cfg, keys)
     XRAY_CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n")
     n = len(cfg["inbounds"][0]["settings"]["clients"])
     logger.info(f"[Xray] Config generated: {XRAY_CONFIG_PATH} ({n} clients)")
@@ -300,7 +315,7 @@ def build_vless_link(uuid: str, user_cfg: dict, keys: dict) -> str:
     """
     domain = user_cfg["tcp_proxy_domain"]
     port = int(user_cfg["external_port"])
-    sni = user_cfg["sni"]
+    sni = user_cfg["sni_host"]
     query = (
         f"encryption=none&security=reality&sni={sni}&fp={FINGERPRINT}"
         f"&pbk={keys['publicKey']}&sid={keys['shortId']}"

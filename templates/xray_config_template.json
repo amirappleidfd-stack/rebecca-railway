@@ -1,0 +1,94 @@
+{
+  "log": {
+    "loglevel": "warning"
+  },
+
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "ip": [
+          "geoip:private"
+        ],
+        "outboundTag": "BLOCK"
+      }
+    ]
+  },
+
+  "inbounds": [
+    {
+      "tag": "VLESS-REALITY-XHTTP",
+
+      "listen": "0.0.0.0",
+
+      "port": {{INTERNAL_PORT}},
+
+      "protocol": "vless",
+
+      "settings": {
+        "clients": [
+          {{CLIENTS}}
+        ],
+        "decryption": "none"
+      },
+
+
+      "streamSettings": {
+
+        "network": "xhttp",
+
+        "security": "reality",
+
+        "realitySettings": {
+
+          "show": false,
+
+          "dest": "{{SNI_HOST}}:443",
+
+          "serverNames": [
+            "{{SNI_HOST}}"
+          ],
+
+          "privateKey": "{{PRIVATE_KEY}}",
+
+          "shortIds": [
+            "{{SHORT_ID}}"
+          ]
+
+        },
+
+
+        "xhttpSettings": {
+
+          "path": "/",
+
+          "mode": "auto",
+
+          "extra": {
+            "xPaddingBytes": "100-1000",
+            "scMaxEachPostBytes": 1000000
+          }
+
+        }
+
+      }
+
+    }
+
+  ],
+
+
+  "outbounds": [
+
+    {
+      "tag": "DIRECT",
+      "protocol": "freedom"
+    },
+
+    {
+      "tag": "BLOCK",
+      "protocol": "blackhole"
+    }
+
+  ]
+}
