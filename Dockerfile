@@ -42,6 +42,8 @@ ENV PYTHONUNBUFFERED=1 \
     SQLALCHEMY_DATABASE_URL=sqlite:////code/db.sqlite3 \
     XRAY_EXECUTABLE_PATH=/usr/local/bin/xray \
     XRAY_ASSETS_PATH=/usr/local/share/xray \
+    XRAY_BINARY_PATH=/app/xray-core/xray \
+    XRAY_CONFIG_PATH=/app/xray-config/config.json \
     TZ=UTC
 
 WORKDIR /code
@@ -69,7 +71,7 @@ RUN ln -s /code/marzban-cli.py /usr/bin/marzban-cli \
 
 # Run as a non-root user for safety.
 RUN useradd -m -u 1000 appuser \
-    && mkdir -p /code/data /var/lib/marzban /app/xray-config \
+    && mkdir -p /code/data /var/lib/marzban /app/xray-config /app/xray-logs \
     && chown -R appuser:appuser /code /var/lib/marzban /app
 USER appuser
 

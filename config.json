@@ -1,0 +1,6 @@
+{
+  "tcp_proxy_domain": "hayabusa.proxy.rlwy.net",
+  "external_port": 22124,
+  "internal_port": 443,
+  "sni": "is1-ssl.mzstatic.com"
+}

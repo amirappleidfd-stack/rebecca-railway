@@ -1,16 +1,15 @@
 """Spider Xray startup/shutdown job.
 
-Runs the Spider Xray lifecycle in a background thread so the web app can serve
-immediately while we wait (up to indefinitely) for the Railway TCP proxy domain
-to appear. Startup order (spec section 8):
+Runs the VLESS Reality + XHTTP Xray lifecycle in a background thread so the web
+app serves immediately. Startup order (spec section 10):
 
-  1. Application starts (uvicorn) — already running when this fires.
-  2. Detect Railway variables.
-  3. Install/check Xray.
-  4. Generate config.json.
-  5. Validate config.
-  6. Start Xray process.
-  7. Subscriptions become live (spider.endpoint_ready == True).
+  1. Check Xray exists (install if missing).
+  2. Load config.json (user settings, never overwritten).
+  3. Generate missing Reality keys / shortId.
+  4. Generate Xray config.
+  5. Validate config (xray run -test).
+  6. Start Xray.
+  7. Web application already running; subscriptions become live (spider.ready).
 """
 
 import threading
