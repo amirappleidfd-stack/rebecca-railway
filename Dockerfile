@@ -13,8 +13,17 @@ RUN apt-get update \
         build-essential curl unzip gcc python3-dev libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install the Xray-core binary (used by the panel to run the proxy core).
+# Install the Xray-core binary (used by Marzban's own core).
 RUN curl -L https://github.com/Gozargah/Marzban-scripts/raw/master/install_latest_xray.sh | bash
+
+# Install the official Xray-core for the Spider integration at /app/xray-core.
+RUN mkdir -p /app/xray-core \
+    && curl -L -o /tmp/xray.zip \
+        https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip \
+    && unzip -o /tmp/xray.zip -d /app/xray-core \
+    && chmod +x /app/xray-core/xray \
+    && rm -f /tmp/xray.zip \
+    && /app/xray-core/xray version
 
 COPY ./requirements.txt /code/
 RUN python3 -m pip install --upgrade pip setuptools wheel \
@@ -47,6 +56,8 @@ RUN apt-get update \
 COPY --from=build $PYTHON_LIB_PATH $PYTHON_LIB_PATH
 COPY --from=build /usr/local/bin /usr/local/bin
 COPY --from=build /usr/local/share/xray /usr/local/share/xray
+# Spider Xray-core binary (installed + verified in the build stage).
+COPY --from=build /app/xray-core /app/xray-core
 
 # Application source (respects .dockerignore).
 COPY . /code
@@ -58,8 +69,8 @@ RUN ln -s /code/marzban-cli.py /usr/bin/marzban-cli \
 
 # Run as a non-root user for safety.
 RUN useradd -m -u 1000 appuser \
-    && mkdir -p /code/data /var/lib/marzban \
-    && chown -R appuser:appuser /code /var/lib/marzban
+    && mkdir -p /code/data /var/lib/marzban /app/xray-config \
+    && chown -R appuser:appuser /code /var/lib/marzban /app
 USER appuser
 
 EXPOSE 8000
