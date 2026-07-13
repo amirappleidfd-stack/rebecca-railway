@@ -160,3 +160,4 @@ xray-core
 *-dev.yml
 *-dev.yaml
 *-debug.*
+hermes-agent/
