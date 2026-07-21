@@ -66,7 +66,7 @@ USER 1000
 
 EXPOSE 8080
 
-CMD curl -fsS http://127.0.0.1:${PORT}/ || exit 1
+CMD curl -fsS http://0.0.0.0:${PORT}/ || exit 1
 
 
 ENTRYPOINT ["/app/start.sh"]
